@@ -1,6 +1,6 @@
 import time
 
-from upstash_redis import Redis, redis
+from upstash_redis import Redis
 from app.config import settings
 
 _redis_client: Redis | None = None
@@ -38,12 +38,10 @@ class RateLimiter:
 
         return allowed, remaining, request_count
 
-    
-    def is_allowed_ip(ip: str, route: str, limit: int, window_seconds: int) -> tuple[bool, int, int]:
+    def is_allowed_ip(self, ip: str, route: str, limit: int, window_seconds: int) -> tuple[bool, int, int]:
         limiter = RateLimiter(max_requests=limit, window_seconds=window_seconds)
         key = f"rate_limit:ip:{ip}:{route}"
         return limiter.is_allowed(key)
-
 
     def is_allowed_user(
         user_id: str, limit: int = 20, window_seconds: int = 60
@@ -51,3 +49,15 @@ class RateLimiter:
         limiter = RateLimiter(max_requests=limit, window_seconds=window_seconds)
         key = f"rate_limit:user:{user_id}"
         return limiter.is_allowed(key)
+
+
+def is_allowed_ip(ip: str, route: str, limit: int, window_seconds: int) -> tuple[bool, int, int]:
+    return RateLimiter(max_requests=limit, window_seconds=window_seconds).is_allowed_ip(
+        ip, route, limit, window_seconds
+    )
+
+
+def is_allowed_user(user_id: str, limit: int = 20, window_seconds: int = 60) -> tuple[bool, int, int]:
+    return RateLimiter(max_requests=limit, window_seconds=window_seconds).is_allowed_user(
+        user_id, limit=limit, window_seconds=window_seconds
+    )
