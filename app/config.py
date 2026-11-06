@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str = ""
     llm_model_answer: str = "gpt-4o"
     llm_model_grader: str = "gpt-4o-mini"
-    embedding_model: str = "text-embedding-3-small"
+    llm_model_embedding: str = "text-embedding-3-small"
 
     qdrant_url: str = "http://localhost:6333"
     qdrant_collection: str = "documents"
