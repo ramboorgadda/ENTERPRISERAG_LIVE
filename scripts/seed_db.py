@@ -2,6 +2,7 @@ import argparse
 import os
 import random
 import time
+from collections import defaultdict
 from pathlib import Path
 
 import psycopg2
@@ -88,7 +89,13 @@ def seed_docs(noise_sample_size: int | str = 150) -> dict:
         logger.warning("No files found to ingest — did you run `make seed-data`?")
         return {"true_ingested": 0, "noisy_ingested": 0, "failed": 0, "chunks": 0}
 
-    counters = {"true_ingested": 0, "noisy_ingested": 0, "failed": 0, "chunks": 0}
+    counters = {
+        "true_ingested": 0,
+        "noisy_ingested": 0,
+        "failed": 0,
+        "chunks": 0,
+        "failed_by_reason": defaultdict(int),
+    }
     t0 = time.time()
 
 
@@ -108,9 +115,23 @@ def seed_docs(noise_sample_size: int | str = 150) -> dict:
     logger.info("  noisy_data ingested : {}", counters["noisy_ingested"])
     logger.info("  failed (skipped)    : {}", counters["failed"])
     logger.info("  total chunks upserted: {}", counters["chunks"])
+    if counters["failed_by_reason"]:
+        logger.info("  failure breakdown:")
+        for reason, count in sorted(
+            counters["failed_by_reason"].items(),
+            key=lambda item: item[1],
+            reverse=True,
+        ):
+            logger.info("    - {}: {}", reason, count)
     logger.info("=" * 60)
 
-    return counters
+    return {
+        "true_ingested": counters["true_ingested"],
+        "noisy_ingested": counters["noisy_ingested"],
+        "failed": counters["failed"],
+        "chunks": counters["chunks"],
+        "failed_by_reason": dict(counters["failed_by_reason"]),
+    }
 
 
 def _ingest_one(processor, src: Path, idx: int, total: int, counters: dict,
@@ -133,7 +154,22 @@ def _ingest_one(processor, src: Path, idx: int, total: int, counters: dict,
             logger.info("  [{}/{}] progress — {} chunks so far",idx, total, counters["chunks"])
 
     except Exception as exc:  # noqa: BLE001
-        logger.warning("[{}/{}] FAILED {} {}: {}", idx, total, label, src.name, type(exc).__name__)
+        exc_name = type(exc).__name__
+        exc_msg = str(exc).strip().splitlines()[0] if str(exc).strip() else "<no message>"
+        reason = exc_name
+        if src.suffix.lower() == ".pdf" and exc_name == "RepositoryNotFoundError":
+            reason = "pdf_model_repo_auth"
+
+        logger.warning(
+            "[{}/{}] FAILED {} {}: {} | {}",
+            idx,
+            total,
+            label,
+            src.name,
+            exc_name,
+            exc_msg,
+        )
+        counters["failed_by_reason"][reason] += 1
         counters["failed"] += 1
 
 

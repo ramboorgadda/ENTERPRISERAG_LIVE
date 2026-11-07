@@ -10,7 +10,7 @@ from app.models import RetrievedChunk
 VECTOR_SIZE = 1536
 
 def get_client() -> QdrantClient:
-    return QdrantClient(url=settings.QDRANT_URL)
+    return QdrantClient(url=settings.qdrant_url)
 
 def ensure_collection() -> None:
     client = get_client()
@@ -27,7 +27,7 @@ def upsert_chunks(chunks: list[RetrievedChunk], embeddings: list[list[float]]) -
         PointStruct(
             id=str(uuid.uuid4()),
             vector=embedding,
-            payload={"text": chunk.text,"id": str(chunk.id)}
+            payload={"text": chunk.text, "source": chunk.source}
         )
         for chunk, embedding in zip(chunks, embeddings)
     ]
