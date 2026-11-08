@@ -473,10 +473,12 @@ def _render_response_card(status: int, payload: Any) -> None:
 
 def _sidebar(base_url: str) -> str:
     with st.sidebar:
-        st.image(
-            "https://img.shields.io/badge/ADV--RAG-K8s%20IT--Ops-009688?style=for-the-badge&logo=kubernetes",
-            use_container_width=True,
-        )
+        badge_url = "https://img.shields.io/badge/ADV--RAG-K8s%20IT--Ops-009688?style=for-the-badge&logo=kubernetes"
+        try:
+            st.image(badge_url, use_container_width=True)
+        except TypeError:
+            # Streamlit <1.29 uses use_column_width for st.image.
+            st.image(badge_url, use_column_width=True)
         st.markdown("---")
         base_url = st.text_input("API Base URL", value=base_url, key="base_url_input")
         st.markdown("[Swagger UI](http://localhost:8000/docs) · [ReDoc](http://localhost:8000/redoc)")
