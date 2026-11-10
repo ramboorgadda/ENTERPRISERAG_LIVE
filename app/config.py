@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     aws_region: str = "us-east-1"
 
     tavily_api_key: str = ""
+    huggingface_hub_token: str = ""
 
 
     jwt_secret: str = ""

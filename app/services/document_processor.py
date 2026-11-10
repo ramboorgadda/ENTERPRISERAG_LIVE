@@ -1,13 +1,29 @@
 from pathlib import Path
 import re
+import sys
 
 from docling.chunking import HybridChunker
-from docling.document_converter import DocumentConverter
+from docling.datamodel.accelerator_options import AcceleratorDevice, AcceleratorOptions
+from docling.datamodel.base_models import InputFormat
+from docling.datamodel.pipeline_options import PdfPipelineOptions
+from docling.document_converter import DocumentConverter, PdfFormatOption
 from loguru import logger
 
 class DocumentProcessor:
     def __init__(self):
-        self.converter = DocumentConverter()
+        pipeline_options = PdfPipelineOptions()
+        # Avoid hard-coding MPS so ingestion works on Windows/Linux too.
+        default_device = getattr(AcceleratorDevice, "AUTO", None)
+        if default_device is None:
+            default_device = AcceleratorDevice.CPU
+        if sys.platform != "darwin":
+            default_device = AcceleratorDevice.CPU
+        pipeline_options.accelerator_options = AcceleratorOptions(
+            num_threads=8, device=default_device
+        )
+        self.converter = DocumentConverter(
+            format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options)}
+        )
         self.chunker = HybridChunker()
 
     def _fallback_text_chunks(self, file_path: Path) -> list[dict]:
@@ -25,6 +41,7 @@ class DocumentProcessor:
             for i in range(0, len(text), chunk_size)
         ]
 
+    
     def process_document(self, file_path: str) -> list[dict]:
         path = Path(file_path)
         if path.suffix.lower() in {".txt", ".md", ".html", ".htm"}:
