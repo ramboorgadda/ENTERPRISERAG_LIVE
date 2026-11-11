@@ -17,10 +17,14 @@ class Invoker(ABC):
         
 class ServiceInvoker(Invoker):
     SUPPORTED_INTENTS = {"rag","web_fallback"}
+
+    def __init__(self, default_flags: dict[str, Any] | None = None) -> None:
+        self.default_flags = default_flags or {}
     
     def invoke(self, question: str,flags: dict,intent:str) -> tuple[ChatResponse, list[RetrievedChunk]]:
         if intent not in self.SUPPORTED_INTENTS:
             raise SkippedIntent(f"Intent '{intent}' not supported")
         if intent == "web_fallback" and not settings.tavily_api_key:
             raise SkippedIntent("tavily_unset: TAVILY_API_KEY not configured")
-        return run_rag_with_trace_no_cache(question, flags)
+        effective_flags = flags or self.default_flags
+        return run_rag_with_trace_no_cache(question, effective_flags)

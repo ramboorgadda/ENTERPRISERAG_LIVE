@@ -2,7 +2,6 @@ import sys
 import argparse as argparser
 import datetime
 import json
-import os
 from pathlib import Path
 from eval.invokers import ServiceInvoker,SkippedIntent
 from eval.post_checks import forbidden_keywords_check,source_overlap
@@ -41,7 +40,7 @@ def main() -> None:
         sys.exit("API mode not implemented")
     rows: list[dict] = []
     skipped: list[dict] = []
-    
+
     for g in goldens:
         try:
             resp,chunks = invoker.invoke(g.question,flags,g.intent)
@@ -63,34 +62,40 @@ def main() -> None:
                 "forbidden_keywords": g.forbidden_keywords, 
                     }
                 )
-        metrics = run_ragas(rows) if rows else []
-        for row,m in zip(rows, metrics):
-            row["ragas_metrics"] = m
-            row["forbidden_keywords_check"] = forbidden_keywords_check(row["answer"], row["forbidden_keywords"])
-            row["source_overlap"] = source_overlap(row["actual_sources"], row["golden_sources"])
-        timestamp = datetime.datetime.now(datetime.timezone.utc)
-        out_path = (
-            Path(args.output)
-            if args.output
-            else Path(
-                f"eval/results/{timestamp:%Y%m%dT%H%M%SZ}_{args.profile}.json"
-            )
+
+    metrics = run_ragas(rows) if rows else []
+    for row,m in zip(rows, metrics):
+        row["ragas_metrics"] = m
+        row["forbidden_check"] = forbidden_keywords_check(row["answer"], row["forbidden_keywords"])
+        row["source_overlap"] = source_overlap(row["actual_sources"], row["golden_sources"])
+
+    timestamp = datetime.datetime.now(datetime.timezone.utc)
+    out_path = (
+        Path(args.output)
+        if args.output
+        else Path(
+            f"eval/results/{timestamp:%Y%m%dT%H%M%SZ}_{args.profile}.json"
         )
-        out_path.parent.mkdir(parents=True, exist_ok=True)
+    )
+    out_path.parent.mkdir(parents=True, exist_ok=True)
 
-        payload = {
-            "profile": args.profile,
-            "flags": flags,
-            "timestamp_utc": timestamp.isoformat().replace("+00:00", "Z"),
-            "filter": args.filter,
-            "mode": args.mode,
-            "rows": rows,
-            "skipped": skipped,
-            "aggregate": aggregate(rows),
-        }
+    payload = {
+        "profile": args.profile,
+        "flags": flags,
+        "timestamp_utc": timestamp.isoformat().replace("+00:00", "Z"),
+        "filter": args.filter,
+        "mode": args.mode,
+        "rows": rows,
+        "skipped": skipped,
+        "aggregate": aggregate(rows),
+    }
 
-        out_path.write_text(json.dumps(payload, indent=2, default=str))
-        print_table(payload)
-        print(f"\nWrote: {out_path}")
+    out_path.write_text(json.dumps(payload, indent=2, default=str))
+    print_table(payload)
+    print(f"\nWrote: {out_path}")
+
+
+if __name__ == "__main__":
+    main()
 
     

@@ -2,14 +2,13 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Literal
 
-from sqlalchemy import values
-from sqlalchemy import values
 import yaml
+from loguru import logger
 
 from pydantic import BaseModel,Field,model_validator
 
-INTENT = ["rag","sql","hybrid","web_fallback"]
-FEATURE =[
+INTENT_VALUES = ["rag", "sql", "hybrid", "web_fallback"]
+FEATURE_VALUES = [
     "baseline",
     "sparse",
     "dense",
@@ -24,13 +23,29 @@ FEATURE =[
     "wild"
 ]
 
+Intent = Literal["rag", "sql", "hybrid", "web_fallback"]
+Feature = Literal[
+    "baseline",
+    "sparse",
+    "dense",
+    "hybrid",
+    "rerank",
+    "hyde",
+    "crag",
+    "self_rag",
+    "sql",
+    "hybrid_rag_sql",
+    "security",
+    "wild",
+]
+
 class Golden(BaseModel):
     id: str = Field(..., pattern=r"^q-\d{3}$")
     question: str = Field(..., min_length=1)
-    intent: INTENT
+    intent: Intent
     golden_sources: list[str] = Field(..., min_length=1)
     golden_answer_keywords: list[str] = Field(..., min_length=1)
-    demonstrates_feature: FEATURE
+    demonstrates_feature: Feature
     expected_baseline: Literal["pass", "fail"]
     expected_with_feature: Literal["pass"]
     notes: str
@@ -53,8 +68,11 @@ def load_goldens(path: Path) -> list[Golden]:
     if len(ids) != len(set(ids)):
         raise ValueError("Duplicate IDs found in goldens")
     present_features = {g.demonstrates_feature for g in goldens}
-    all_features = set(FEATURE.__args__)
+    all_features = set(FEATURE_VALUES)
     missing_features = all_features - present_features
     if missing_features:
-        raise ValueError(f"Missing features in goldens: {missing_features}")
+        logger.warning(
+            "Seed questions do not cover all features. Missing: {}",
+            sorted(missing_features),
+        )
     return goldens

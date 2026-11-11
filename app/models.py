@@ -30,7 +30,7 @@ class RetrievedChunkPreview(BaseModel):
     source: str
     score: float = 0.0
 
-class ResponseMetaData(BaseModel):
+class ResponseMetadata(BaseModel):
     route: str = "rag"
     retrieved_chunks: list[RetrievedChunkPreview] = Field(default_factory=list)
     cache_hit: bool = False
@@ -50,7 +50,7 @@ class ChatResponse(BaseModel):
     pending_sql: PendingSQLBlock | None = None
     cache_hit: bool = False
     cost_saved: str = "$0.00"
-    metadata: ResponseMetaData = Field(default_factory=ResponseMetaData)
+    metadata: ResponseMetadata = Field(default_factory=ResponseMetadata)
 
 class QueryRequest(BaseModel):
     question: str = Field(

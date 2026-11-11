@@ -35,3 +35,29 @@ def upsert_chunks(chunks: list[RetrievedChunk], embeddings: list[list[float]]) -
         collection_name=settings.qdrant_collection,
         points=points
     )
+
+
+def search(query_embedding: list[float], top_k: int = 5) -> list[RetrievedChunk]:
+    ensure_collection()
+    client = get_client()
+    if hasattr(client, "search"):
+        response = client.search(
+            collection_name=settings.qdrant_collection,
+            query_vector=query_embedding,
+            limit=top_k,
+        )
+    else:
+        response_obj = client.query_points(
+            collection_name=settings.qdrant_collection,
+            query=query_embedding,
+            limit=top_k,
+        )
+        response = getattr(response_obj, "points", response_obj)
+    return [
+        RetrievedChunk(
+            text=hit.payload["text"],
+            source=hit.payload["source"],
+            score=hit.score,
+        )
+        for hit in response
+    ]
