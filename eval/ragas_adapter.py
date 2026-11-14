@@ -132,7 +132,7 @@ def run(rows: list[dict]) -> list[dict]:
             embeddings=embeddings,
             metrics=[answer_relevancy, context_precision, context_recall, faithfulness],
         )
-        return _normalize_result(result, len(rows))
+        return result.to_pandas().to_dict(orient="records")
     except Exception:
         # Fall back to lightweight lexical metrics if ragas/langchain stack is incompatible.
         return _fallback_metrics(rows)
