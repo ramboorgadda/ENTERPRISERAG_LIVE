@@ -5,6 +5,7 @@ from app.config import settings
 
 _redis_client: Redis | None = None
 
+
 def get_redis_client() -> Redis:
     global _redis_client
     if _redis_client is None:
@@ -14,12 +15,12 @@ def get_redis_client() -> Redis:
         )
     return _redis_client
 
+
 class RateLimiter:
-    
     def __init__(self, max_requests: int, window_seconds: int) -> None:
         self.max_requests = max_requests
         self.window_seconds = window_seconds
-        
+
     def is_allowed(self, key: str) -> tuple[bool, int, int]:
         client = get_redis_client()
         now = time.time()
@@ -38,26 +39,33 @@ class RateLimiter:
 
         return allowed, remaining, request_count
 
-    def is_allowed_ip(self, ip: str, route: str, limit: int, window_seconds: int) -> tuple[bool, int, int]:
+    def is_allowed_ip(
+        self, ip: str, route: str, limit: int, window_seconds: int
+    ) -> tuple[bool, int, int]:
         limiter = RateLimiter(max_requests=limit, window_seconds=window_seconds)
         key = f"rate_limit:ip:{ip}:{route}"
         return limiter.is_allowed(key)
 
     def is_allowed_user(
-        user_id: str, limit: int = 20, window_seconds: int = 60
+        self, user_id: str, limit: int = 20, window_seconds: int = 60
     ) -> tuple[bool, int, int]:
         limiter = RateLimiter(max_requests=limit, window_seconds=window_seconds)
         key = f"rate_limit:user:{user_id}"
         return limiter.is_allowed(key)
 
 
-def is_allowed_ip(ip: str, route: str, limit: int, window_seconds: int) -> tuple[bool, int, int]:
-    return RateLimiter(max_requests=limit, window_seconds=window_seconds).is_allowed_ip(
-        ip, route, limit, window_seconds
-    )
+def is_allowed_ip(
+    ip: str, route: str, limit: int, window_seconds: int
+) -> tuple[bool, int, int]:
+    limiter = RateLimiter(max_requests=limit, window_seconds=window_seconds)
+    key = f"rate_limit:ip:{ip}:{route}"
+    return limiter.is_allowed(key)
 
 
-def is_allowed_user(user_id: str, limit: int = 20, window_seconds: int = 60) -> tuple[bool, int, int]:
-    return RateLimiter(max_requests=limit, window_seconds=window_seconds).is_allowed_user(
-        user_id, limit=limit, window_seconds=window_seconds
-    )
+def is_allowed_user(
+    user_id: str, limit: int = 20, window_seconds: int = 60
+) -> tuple[bool, int, int]:
+    limiter = RateLimiter(max_requests=limit, window_seconds=window_seconds)
+    key = f"rate_limit:user:{user_id}"
+    return limiter.is_allowed(key)
+    
