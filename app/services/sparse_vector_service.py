@@ -40,6 +40,7 @@ class SparseVectorIndex:
 def fuse_rrf(
     result_lists: list[list[RetrievedChunk]],
     rrf_k: int = 60,
+    top_k: int = 5
 ) -> list[RetrievedChunk]:
     """Fuse multiple ranked result lists using Reciprocal Rank Fusion."""
     scores: dict[str, float] = {}
