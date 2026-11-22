@@ -15,14 +15,31 @@ from app.security.spotlighting import build_spotlight_context
 from app.security.system_prompt import build_system_prompt
 from app.services.embedding_service import embed_texts
 from app.services.llm_service import generate
-from app.services.vector_store import search
+from app.services.vector_store import search,hybrid_search,sparse_search
 
 
 def _retrieve(question: str, top_k: int = 5) -> list[RetrievedChunk]:
+    top_k = _top_k_flags(flags)
+    search_mode = _search_mode(flags) if 'flags' in locals() else "dense"
+
     embeddings = embed_texts([question])
-    results = search(embeddings[0], top_k=top_k)
+    if search_mode == "dense":
+        results = search(embeddings[0], top_k=top_k)
+    elif search_mode == "sparse":
+        results = sparse_search(question, top_k=top_k)
+    elif search_mode == "hybrid":
+        results = hybrid_search(embeddings[0], question, top_k=top_k)
+    else:
+        results = search(embeddings[0], top_k=top_k)
     chunks = [RetrievedChunk(text=r.text, source=r.source, score=r.score) for r in results]
     return chunks
+
+def _search_mode(flags: dict | None) -> str:
+    if flags is None:
+        return "dense"
+    if not isinstance(flags, dict):
+        return "dense"
+    return flags.get("search_mode", "dense")
 
 def _generate(question: str, retrieved_chunks: list[RetrievedChunk]) -> ChatResponse:
     system_prompt = build_system_prompt()
