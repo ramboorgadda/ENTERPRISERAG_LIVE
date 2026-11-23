@@ -55,7 +55,7 @@ async def _ping_openai() -> bool:
     try:
         from openai import AsyncOpenAI
 
-        client = AsyncOpenAI(api_key=settings.openai_api_key)
+        client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
         await client.models.list()
         return True
     except Exception as exc:
@@ -63,14 +63,18 @@ async def _ping_openai() -> bool:
         return False
 
 async def _ping_tavily() -> bool:
+    # Optional dependency: treat as up unless the configured key is rejected.
+    if not settings.tavily_api_key:
+        return True
     try:
-        from app.services.web_search import search_web
+        import httpx
 
-        search_web("health check")
-        return True
-    except ValueError:
-        # Tavily key not configured — still "up" if the module loads
-        return True
+        async with httpx.AsyncClient(timeout=3) as client:
+            resp = await client.post(
+                "https://api.tavily.com/search",
+                json={"api_key": settings.tavily_api_key, "query": "health check", "max_results": 1},
+            )
+        return resp.status_code < 400
     except Exception as exc:
         logger.debug("Tavily health check failed: {}", exc)
         return False

@@ -64,7 +64,7 @@ def search(query_embedding: list[float], top_k: int = 5) -> list[RetrievedChunk]
 def _build_sparse_index():
     from app.services.sparse_vector_service import SparseVectorIndex
     client = get_client()
-    scroll_result = client.scroll(collection_name=settings.qdrant_collection,
+    points, _ = client.scroll(collection_name=settings.qdrant_collection,
                                 limit=10000,
                                 with_payload=True,
                                 with_vectors=False)
@@ -74,7 +74,7 @@ def _build_sparse_index():
             "source": point.payload["source"] if point.payload else None,
             "id": point.id
         }
-        for point in scroll_result.points
+        for point in points
     ]
     sparse_index = SparseVectorIndex()
     sparse_index.fit(documents)
