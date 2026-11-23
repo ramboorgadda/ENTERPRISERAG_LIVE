@@ -17,10 +17,12 @@ METRIC_NAMES = [
 
 def _get_llm_factory():
     """Get the LLM factory based on the current settings."""
-    from ragas.llms import llm_factory
+    from langchain_openai import ChatOpenAI
+    from ragas.llms import LangchainLLMWrapper
 
-    os.environ.setdefault("OPENAI_API_KEY", settings.openai_api_key)
-    return llm_factory(settings.llm_model_grader)
+    return LangchainLLMWrapper(
+        ChatOpenAI(model=settings.llm_model_grader, api_key=settings.OPENAI_API_KEY)
+    )
 
 
 def _get_ragas_embeddings():
@@ -29,7 +31,7 @@ def _get_ragas_embeddings():
 
     lc_emb = OpenAIEmbeddings(
         model=settings.llm_model_embedding,
-        openai_api_key = settings.openai_api_key
+        openai_api_key = settings.OPENAI_API_KEY
     )
     try:
         wrapper_mod = importlib.import_module("ragas.embedding")
@@ -133,6 +135,7 @@ def run(rows: list[dict]) -> list[dict]:
             metrics=[answer_relevancy, context_precision, context_recall, faithfulness],
         )
         return result.to_pandas().to_dict(orient="records")
-    except Exception:
+    except Exception as exc:
         # Fall back to lightweight lexical metrics if ragas/langchain stack is incompatible.
+        print(f"WARNING: RAGAS failed, using lexical fallback metrics: {type(exc).__name__}: {exc}")
         return _fallback_metrics(rows)

@@ -10,6 +10,18 @@ from eval.ragas_adapter import run as run_ragas
 from eval.reporting import aggregate,print_table
 from eval.schema import load_goldens
 
+
+def _plain_answer(text: str) -> str:
+    """Unwrap the model's ```json {"answer": ...} envelope so graders see prose."""
+    body = text.strip()
+    if body.startswith("```"):
+        body = body.strip("`").removeprefix("json").strip()
+    try:
+        parsed = json.loads(body)
+    except ValueError:
+        return text
+    return parsed.get("answer", text) if isinstance(parsed, dict) else text
+
 def main() -> None:
     ap = argparser.ArgumentParser(description="Run Ragas evaluation")
     ap.add_argument("--profile", required=True, choices=list(PROFILES.keys()), help="Profile to use for evaluation")
@@ -54,7 +66,7 @@ def main() -> None:
                 "demonstrates_feature": g.demonstrates_feature,
                 "intent": g.intent,
                 "question": g.question,
-                "answer": resp.answer,
+                "answer": _plain_answer(resp.answer),
                 "contexts": [c.text for c in chunks],
                 "ground_truth": ", ".join(g.golden_answer_keywords),
                 "actual_sources": resp.sources,
