@@ -30,7 +30,10 @@ def _top_k_flags(flags: dict | int | None) -> int:
     if isinstance(flags, int):
         return flags
     return flags.get("top_k", 5)
-
+def _flag(flags: dict | None, key: str, default):
+    if not isinstance(flags, dict):
+        return default
+    return flags.get(key, default)
 
 def _retrieve(
     question: str,
@@ -38,6 +41,7 @@ def _retrieve(
     flags: dict | int | None = None,
 ) -> list[RetrievedChunk]:
     search_mode = _search_mode(flags)
+    rerank = bool(_flag(flags, "enable_rerank", False))
 
     if search_mode == "sparse":
         results = sparse_search(question, top_k=top_k)
