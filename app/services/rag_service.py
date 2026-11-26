@@ -18,18 +18,8 @@ from app.services.llm_service import generate
 from app.services.vector_store import search,hybrid_search,sparse_search
 
 
-def _search_mode(flags: dict | int | None) -> str:
-    if not isinstance(flags, dict):
-        return "dense"
-    return flags.get("search_mode", "dense")
 
 
-def _top_k_flags(flags: dict | int | None) -> int:
-    if flags is None:
-        return 5
-    if isinstance(flags, int):
-        return flags
-    return flags.get("top_k", 5)
 def _flag(flags: dict | None, key: str, default):
     if not isinstance(flags, dict):
         return default
@@ -37,10 +27,11 @@ def _flag(flags: dict | None, key: str, default):
 
 def _retrieve(
     question: str,
-    top_k: int = 5,
+    top_k: int | None = None,
     flags: dict | int | None = None,
 ) -> list[RetrievedChunk]:
-    search_mode = _search_mode(flags)
+    top_k = int(_flag(flags,"top_k",5))
+    search_mode = str(_flag(flags,"search_mode","dense"))
     rerank = bool(_flag(flags, "enable_rerank", False))
 
     if search_mode == "sparse":
@@ -90,8 +81,8 @@ def _generate(question: str, retrieved_chunks: list[RetrievedChunk]) -> ChatResp
 
 
 def run_rag(question: str, flags: dict | int | None = None) -> ChatResponse:
-    top_k = _top_k_flags(flags)
-    search_mode = _search_mode(flags)
+    top_k = int(_flag(flags,"top_k",5))
+    search_mode = str(_flag(flags,"search_mode","dense"))
     logger.info(f"Running {search_mode} RAG with top_k={top_k}")
     retrieved_chunks = _retrieve(question, top_k=top_k, flags=flags)
     return _generate(question, retrieved_chunks)
@@ -101,8 +92,8 @@ def run_rag_with_trace(
     question: str,
     flags: dict | int | None = None,
 ) -> tuple[ChatResponse, list[RetrievedChunk]]:
-    top_k = _top_k_flags(flags)
-    search_mode = _search_mode(flags)
+    top_k = int(_flag(flags,"top_k",5))
+    search_mode = str(_flag(flags,"search_mode","dense"))
     logger.info(f"Running {search_mode} RAG with top_k={top_k}")
     retrieved_chunks = _retrieve(question, top_k=top_k, flags=flags)
     response = _generate(question, retrieved_chunks)
