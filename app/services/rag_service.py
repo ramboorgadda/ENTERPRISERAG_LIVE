@@ -14,6 +14,7 @@ from app.models import(
 from app.security.spotlighting import build_spotlight_context
 from app.security.system_prompt import build_system_prompt
 from app.services.embedding_service import embed_texts
+from app.services.reranking import Reranker
 from app.services.llm_service import generate
 from app.services.vector_store import search,hybrid_search,sparse_search
 
@@ -49,6 +50,8 @@ def _retrieve(
             )
         else:
             results = search(embeddings[0], top_k=top_k)
+        if rerank and results:
+            results = Reranker().rerank(question, results, top_k=top_k)
 
     return [
         RetrievedChunk(text=result.text, source=result.source, score=result.score)

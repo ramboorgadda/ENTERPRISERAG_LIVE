@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 class Reranker:
     def __init__(self) -> None:
-        self.backend = settings.reranking_backend
+        self.backend = settings.reranker_backend
         self.local_model: object | None = None
         self._voyage_client: object | None = None
     
@@ -18,6 +18,25 @@ class Reranker:
             self.local_model = CrossEncoder(settings.reranker_model)
         return self.local_model
     
+    def rerank(
+        self,
+        query: str,
+        chunks: list[RetrievedChunk],
+        top_k: int | None = None,
+    ) -> list[RetrievedChunk]:
+        if not chunks:
+            return []
+        
+        top_k = top_k or settings.reranker_initial_top_k
+        top_k = min(top_k, len(chunks))
+
+        try:
+            if self.backend == "voyage":
+                return self._rerank_voyage(query, chunks, top_k)
+            return self._rerank_local(query, chunks, top_k)
+        except Exception:
+            logger.exception("Reranking failed, returning original order")
+            return chunks[:top_k]
     def _load_voyage_client(self) -> object:
         if self._voyage_client is None:
             import voyageai
