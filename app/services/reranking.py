@@ -48,7 +48,7 @@ class Reranker:
     def _rerank_local(self, query: str, chunks: list[RetrievedChunk],top_k: int) -> list[RetrievedChunk]:
         local_model = self._load_local_model()
         scores = local_model.predict([(query, chunk.text) for chunk in chunks])
-        scored = [RetrievedChunk(chunk.text, source = chunk.source, score=score,) for chunk, score in zip(chunks, scores,strict=True)]
+        scored = [RetrievedChunk(text=chunk.text, source=chunk.source, score=score) for chunk, score in zip(chunks, scores, strict=True)]
         scored.sort(key=lambda c: c.score, reverse=True)
         return scored[:top_k]
     
@@ -59,6 +59,6 @@ class Reranker:
                     documents=documents,
                     model= settings.reranker_model,
                     top_k=top_k)
-        scored = [RetrievedChunk(chunk.text, source = chunk.source, score=score,) for chunk, score in zip(chunks, results,strict=True)]
+        scored = [RetrievedChunk(text=chunk.text, source=chunk.source, score=score) for chunk, score in zip(chunks, results, strict=True)]
         scored.sort(key=lambda c: c.score, reverse=True)
         return scored[:top_k]

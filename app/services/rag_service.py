@@ -43,6 +43,7 @@ def _retrieve(
             return []
 
         if search_mode == "hybrid":
+            logger.info("Using hybrid search mode.")
             results = hybrid_search(
                 embeddings[0],
                 question,
@@ -51,6 +52,7 @@ def _retrieve(
         else:
             results = search(embeddings[0], top_k=top_k)
         if rerank and results:
+            logger.info("Reranking retrieved chunks.")
             results = Reranker().rerank(question, results, top_k=top_k)
 
     return [
